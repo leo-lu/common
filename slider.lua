@@ -5,8 +5,6 @@
 
 local bgPath = DEF_RES_SC_PUBLISH .. "jindutiaoyuhuadongtiao_bar/bar2-2.png"
 local blockPath = DEF_RES_SC_PUBLISH .. "jindutiaoyuhuadongtiao_bar/bar2-1.png"
-local bgPath = DEF_RES_SC_PUBLISH .. "jindutiaoyuhuadongtiao_bar/bar2-2.png"
-local blockPath = DEF_RES_SC_PUBLISH .. "jindutiaoyuhuadongtiao_bar/bar2-1.png"
 
 local bgPath1 = DEF_RES_SC_PUBLISH .. "jindutiaoyuhuadongtiao_bar/bar2-2.png"
 local blockPath1 = DEF_RES_SC_PUBLISH .. "jindutiaoyuhuadongtiao_bar/bar2-1.png"
@@ -76,8 +74,6 @@ end)
 function slider:ctor(size, bg, block, vSize, cSize, dir)
 	self:setContentSize(size)
 
-	local vVal, cVal = getVal(dir, vSize, cSize)
-
 	local imgBg = ccui.ImageView:create(bg)
 	imgBg:setScale9Enabled(true)
 	imgBg:setCapInsets(cc.rect(0, 0, imgBg:getContentSize().width, imgBg:getContentSize().height))
@@ -87,32 +83,50 @@ function slider:ctor(size, bg, block, vSize, cSize, dir)
 
 	local imgBlock = ccui.ImageView:create(block)
 	imgBlock:setScale9Enabled(true)
-	--imgBlock:setCapInsets(cc.rect(8, 5, imgBlock:getContentSize().width - 16, imgBlock:getContentSize().height - 10))
 	imgBlock:setCapInsets(cc.rect(0, 0, imgBlock:getContentSize().width, imgBlock:getContentSize().height))
-	if cVal < vVal then cVal = vVal end
-	
+
 	local posOffset = nil
-	if dir == dirEnum.horizontal then
-		self.blockSize = cc.size(vVal/(cVal/vVal), size.height)
-		posOffset = 1 - self.blockSize.width / size.width
-		imgBlock:setAnchorPoint(0, 0.5)
-		imgBlock:setPosition(0, size.height/2)
-	elseif dir == dirEnum.vertical then
-		self.blockSize = cc.size(size.width, vVal/(cVal/vVal))
-		posOffset = 1 - self.blockSize.height / size.height
-		imgBlock:setAnchorPoint(0.5, 1)
-		imgBlock:setPosition(size.width/2, size.height)
+
+	local function init(vSize_, cSize_)
+		self.vVal, self.cVal = getVal(dir, vSize_, cSize_)
+		if self.cVal < self.vVal then self.cVal = self.vVal end
+
+		if dir == dirEnum.horizontal then
+			self.blockSize = cc.size(self.vVal/(self.cVal/self.vVal), size.height)
+			posOffset = 1 - self.blockSize.width / size.width
+			imgBlock:setAnchorPoint(0, 0.5)
+			imgBlock:setPosition(0, size.height/2)
+		elseif dir == dirEnum.vertical then
+			self.blockSize = cc.size(size.width, self.vVal/(self.cVal/self.vVal))
+			posOffset = 1 - self.blockSize.height / size.height
+			imgBlock:setAnchorPoint(0.5, 1)
+			imgBlock:setPosition(size.width/2, size.height)
+		end
+		
+		imgBlock:setContentSize(self.blockSize)
 	end
-	
-	imgBlock:setContentSize(self.blockSize)
+	init(vSize, cSize)
 	self:addChild(imgBlock)
 
+	function self:refresh()
+		local vSize = nil
+    	local cSize = nil
+		if g_sliderTypeViewEnum.TABLE_VIEW == self.type then
+			vSize = self.view:getViewSize()
+	    	cSize = self.view:getContainer():getContentSize()
+		elseif g_sliderTypeViewEnum.LIST_VIEW == self.type then
+			vSize = self.view:getContentSize()
+	    	cSize = self.view:getInnerContainer():getContentSize()
+		end
+
+		init(vSize, cSize)
+	end
+
 	local bounce = 1
-	
 	self:setCascadeOpacityEnabled(true)
 	self:setOpacity(0)
-	local show = false
-	local showLastTime = 0
+	self.show = false
+	self.showLastTime = 0
 	function self:setValue(val)
 		local sVal = nil
 		local bVal = nil
@@ -125,15 +139,15 @@ function slider:ctor(size, bg, block, vSize, cSize, dir)
 		end
 
 		if sVal == bVal then return end
-		if 0 ~= val and not show then
+		if 0 ~= val and not self.show then
 			self:runAction(cc.FadeIn:create(0.5))
 
-			show = true
+			self.show = true
 		end
 
 		if 0 > val then
-			local vV = vVal * (1 + val)
-			local bV = vV/(cVal/vV)
+			local vV = self.vVal * (1 + val)
+			local bV = vV/(self.cVal/vV)
 
 			if dir == dirEnum.horizontal then
 				imgBlock:setAnchorPoint(1, 0.5)
@@ -145,8 +159,8 @@ function slider:ctor(size, bg, block, vSize, cSize, dir)
 				imgBlock:setContentSize(cc.size(self.blockSize.width, bV * bounce))
 			end
 		elseif posOffset < val then
-			local vV = vVal * (1 - val + posOffset)
-			local bV = vV/(cVal/vV)
+			local vV = self.vVal * (1 - val + posOffset)
+			local bV = vV/(self.cVal/vV)
 
 			if dir == dirEnum.horizontal then
 				imgBlock:setAnchorPoint(0, 0.5)
@@ -169,25 +183,23 @@ function slider:ctor(size, bg, block, vSize, cSize, dir)
 			end
 		end
 
-		showLastTime = os.time()
+		self.showLastTime = os.time()
 	end
 
-
 	local scheduler = cc.Director:getInstance():getScheduler()
-	local schedulerEntry = nil
     self:registerScriptHandler(function(event)
         if "enter" == event then
-		    schedulerEntry = scheduler:scheduleScriptFunc(function()
-		        if show then
+		    self.schedulerEntry = scheduler:scheduleScriptFunc(function()
+		        if self.show then
 		        	local time = os.time()
-		        	if 1 == time - showLastTime then
+		        	if 1 == time - self.showLastTime then
 		        		self:runAction(cc.FadeOut:create(0.5))
-		        		show = false
+		        		self.show = false
 		        	end
 		        end
 		    end, 1, false )   
         elseif "exit" == event and nil ~= schedulerEntry then
-            scheduler:unscheduleScriptEntry(schedulerEntry)
+            scheduler:unscheduleScriptEntry(self.schedulerEntry)
         end
 	end)
 end
@@ -197,6 +209,9 @@ function slider:createSlider(size, view, type)
     local block = nil
     local vSize = nil
     local cSize = nil
+
+    self.view = view
+    self.type = type
 
 	if g_sliderTypeViewEnum.TABLE_VIEW == type then
 		vSize = view:getViewSize()
@@ -211,8 +226,6 @@ function slider:createSlider(size, view, type)
 	end
 
 	local dir = getDir(view, type)
-	local vVal, cVal = getVal(dir, vSize, cSize)
-
 	if dir == dirEnum.horizontal then
 		bg = bgPath1
     	block = blockPath1
@@ -226,12 +239,12 @@ function slider:createSlider(size, view, type)
     if g_sliderTypeViewEnum.TABLE_VIEW == type then
 		local function scrollViewDidScroll(view)
 			local pos = view:getContentOffset()
-			local h = vVal/(cVal/vVal)
+			local h = slider.vVal/(slider.cVal/slider.vVal)
 			local p = nil
 			if dir == dirEnum.horizontal then
-				p = (cVal - vVal + pos.x)/cVal
+				p = (slider.cVal - slider.vVal + pos.x)/slider.cVal
 			elseif dir == dirEnum.vertical then
-				p = (cVal - vVal + pos.y)/cVal
+				p = (slider.cVal - slider.vVal + pos.y)/slider.cVal
 			end
             if nil ~= slider.setValue then
 			    slider:setValue(p)
@@ -244,12 +257,12 @@ function slider:createSlider(size, view, type)
 				ccui.ScrollviewEventType.bounceTop == evenType or 
 				ccui.ScrollviewEventType.bounceBottom == evenType then
 				local x, y = view:getInnerContainer():getPosition()
-				local h = vVal/(cVal/vVal)
+				local h = slider.vVal/(slider.cVal/slider.vVal)
 				local p = nil
 				if dir == dirEnum.horizontal then
-					p = (cVal - vVal + x)/cVal
+					p = (slider.cVal - slider.vVal + x)/slider.cVal
 				elseif dir == dirEnum.vertical then
-					p = (cVal - vVal + y)/cVal
+					p = (slider.cVal - slider.vVal + y)/slider.cVal
 				end
                 if nil ~= slider.setValue then
 				    slider:setValue(p)
