@@ -251,26 +251,30 @@ function Tools:addChildForDrop( child, callback, zOrder )
                                                 end
                                             end ) ) )
 end
+--给数字label绑定 setNum 函数；实现加减数字动画
+function _M:bindSetNumFun( lblObj )
+    function lblObj:setNum( num, delay, callback )
+        local curNum =  tonumber( self:getString() )
+	    if nil == curNum or curNum == num then
+		    return
+	    end
+	    delay = delay or 1
 
-function _M:setNum( num, callback, delay )
-    local curNum =  tonumber( self:getString() )
-	if nil == curNum or curNum == num then
-		return
-	end
-	delay = delay or 1
-
-	local spwan = math.abs( num - curNum )
-	local dt = delay / spwan
-	local PN = spwan / ( num - curNum )
+	    local spwan = math.abs( num - curNum )
+	    local dt = delay / spwan
+	    local PN = spwan / ( num - curNum )
 
 
-	for i = 1, spwan do
-		self:runAction( cc.Sequence:create( cc.DelayTime:create( dt * ( i - 1 ) ),
-												 cc.CallFunc:create( function()
-												 	curNum = curNum + PN
-												 	if nil ~= callback then
-												 		callback( curNum )
-												 	end
-												 end ) ) )
-	end
+	    for i = 1, spwan do
+		    self:runAction( cc.Sequence:create( cc.DelayTime:create( dt * ( i - 1 ) ),
+												     cc.CallFunc:create( function()
+												 	    curNum = curNum + PN
+												 	    if nil ~= callback then
+												 		    callback( curNum )
+                                                        else
+                                                            self:setString( curNum )
+												 	    end
+												     end ) ) )
+	    end
+    end   
 end
