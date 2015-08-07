@@ -5,8 +5,8 @@
 --endregion
 
 module( ..., package.seeall )
-
-local Tools = _M
+local Tools     = _M
+local DIC_TAG   = "dic@"
 
 function Tools:search (k, plist)
     for i=1, table.getn( plist ) do
@@ -58,11 +58,38 @@ function Tools:formatTime( time )
     return t
 end
 
+function Tools:formatDate( dt )
+    local t = {}
+    t.y = os.date("%Y", dt)
+    t.m = os.date("%m", dt)
+    t.d = os.date("%d", dt)
+    t.H = os.date("%H", dt)
+    t.M = os.date("%M", dt)
+    t.S = os.date("%S", dt)
+    return t, t.y.."-"..t.m.."-"..t.d.." "..t.H..":"..t.M..":"..t.S
+end
+
+function Tools:convertToTime( str )
+    if nil == str or "" == str then return 0 end
+
+    local dt    = self:Split( str, " ", false )
+    local date  = self:Split( dt[1], "/", false )
+    local time  = self:Split( dt[2], ":", false )
+
+    local Y = date[1]
+    local M = date[2]
+    local D = date[3]
+    local H = time[1]
+    local MM = time[2]
+    local SS = time[3]
+
+    return os.time{ year = Y, month = M, day = D, hour = H, min = MM, sec = SS }
+end
 
 --分割字符串
 function Tools:Split( szFullString, szSeparator, isToNumber )
-    if string.len( szFullString ) == 0 then
-        return
+    if szFullString == nil or string.len( szFullString ) == 0 then
+        return {}
     end
 
     if nil == isToNumber then isToNumber = true end
@@ -103,6 +130,12 @@ function Tools:convertStr(str, valueList)
     return str
 end
 
+--富文本
+function Tools:richTextConvertStr(str, valueList, ccSize, fontSize)
+    local str = self:convertStr(str, valueList)
+    return require("component/richText"):create(str, ccSize, fontSize)
+end
+
 --置灰
 function Tools:setGrayed( targetSpirte ,isGrayed )
     if targetSpirte == nil or isGrayed == nil then
@@ -115,10 +148,18 @@ function Tools:setGrayed( targetSpirte ,isGrayed )
         glProgam:updateUniforms()
         local glprogramstate = cc.GLProgramState:getOrCreateWithGLProgram( glProgam )
         targetSpirte:setGLProgramState( glprogramstate )
-        glprogramstate:release()
     else
         targetSpirte:setGLProgram( cc.GLProgramCache:getInstance():getGLProgram( "ShaderPositionTextureColor_noMVP" ) )
     end
+end
+
+
+--Button置灰
+function Tools:setButtonGrayed( targetButton ,isGrayed )
+    self:setGrayed( targetButton:getVirtualRenderer():getSprite(), isGrayed )
+    targetButton:setHighlighted( true )
+    self:setGrayed( targetButton:getVirtualRenderer():getSprite(), isGrayed )
+    targetButton:setHighlighted( false )
 end
 
 
@@ -181,7 +222,7 @@ function Tools:getUpFirst( str )
         return ""
     end
     local first = string.sub( str, 1, 1 )
-    return string.gsub( str, first, string.upper( first ) )
+    return string.gsub( str, first, string.upper( first ), 1, 1 )
 end
 
 
@@ -240,21 +281,88 @@ function Tools:getCrossDiffusionPos( centerPos, radius )
     return posList
 end
 
-function Tools:addChildForDrop( child, callback, zOrder )
-    zOrder = zOrder or 0
-    myG.getRunningScene():addChild( child, zOrder )
-    child:setPositionY( child:getContentSize().height )
-    child:runAction( cc.Sequence:create( cc.EaseBounceOut:create( cc.MoveBy:create( 1, cc.p( 0, -child:getContentSize().height ) ) ),
-                                            cc.CallFunc:create( function()
-                                                if nil ~= callback then
-                                                    callback()
-                                                end
-                                            end ) ) )
+function Tools:showWithAction( target, enum, callback )
+    enum = enum or LayerActionEnum.Normal
+
+    local function call()
+        if nil ~= callback then
+            callback()
+        end
+    end
+
+    local switch = {
+        [LayerActionEnum.Normal] = function()
+            call()
+        end,
+        [LayerActionEnum.Drop] = function()
+            target:setPositionY( g_winH )
+            target:runAction( cc.Sequence:create( cc.EaseBounceOut:create(
+                                                  cc.MoveBy:create( 0.8, cc.p( 0, -g_winH ) ) ),
+                                                  cc.CallFunc:create( function()
+                                                        call()
+                                                  end ) ) )
+        end,
+        [LayerActionEnum.Scale] = function()
+            target:setScale( 0.2 )
+            local aPos = target:getAnchorPoint()
+            target:setAnchorPoint( 0.5, 0.5 )
+            local tPos = myG.Helper:getPosition( target )
+            target:setPosition( ( 0.5 - aPos.x ) * target:getContentSize().width + tPos.x,
+                                ( 0.5 - aPos.y ) * target:getContentSize().height + tPos.y )
+            target:runAction( cc.Sequence:create( cc.EaseBackOut:create(
+                                                  cc.ScaleTo:create( 0.35, 1 ) ),
+                                                  cc.CallFunc:create( function()
+                                                        call()
+                                                  end ) ) )
+        end,
+    }
+    local action = switch[enum]
+    if nil ~= action then
+        action()
+    end
 end
+
+function Tools:hideWithAction( target, enum, callback )
+    enum = enum or LayerActionEnum.Normal
+
+    local function call()
+        if nil ~= callback then
+            callback()
+        end
+    end
+
+    local switch = {
+        [LayerActionEnum.Normal] = function()
+            call()
+        end,
+        [LayerActionEnum.Drop] = function()
+            target:setPositionY( g_winH )
+            target:runAction( cc.Sequence:create( cc.EaseBounceOut:create(
+                                                  cc.MoveBy:create( 0.8, cc.p( 0, g_winH ) ) ),
+                                                  cc.CallFunc:create( function()
+                                                        call()
+                                                  end ) ) )
+        end,
+        [LayerActionEnum.Scale] = function()
+            target:runAction( cc.Sequence:create( cc.EaseBackIn:create(
+                                                  cc.ScaleTo:create( 0.35, 0.2 ) ),
+                                                  cc.CallFunc:create( function()
+                                                        call()
+                                                  end ) ) )
+        end,
+    }
+    local action = switch[enum]
+    if nil ~= action then
+        action()
+    end
+end
+
 --给数字label绑定 setNum 函数；实现加减数字动画
 function _M:bindSetNumFun( lblObj )
-    function lblObj:setNum( num, delay, callback )
-        local curNum =  tonumber( self:getString() )
+    function lblObj:setNum( curNum, num, delay, callback )
+        if nil == curNum then
+            curNum =  tonumber( self:getString() )
+        end
 	    if nil == curNum or curNum == num then
 		    return
 	    end
@@ -278,3 +386,144 @@ function _M:bindSetNumFun( lblObj )
 	    end
     end   
 end
+
+function Tools:convertDictionary( root )
+    local childList = root:getChildren()
+    if #childList > 0 then
+        for k, v in ipairs( childList ) do
+            if v:getDescription() == "Label" then
+                local text = v:getString()
+                if text:find( DIC_TAG ) then
+                    local dicText = self:Split( myG.getStrForDictionary( v:getString() ), "@", false )
+                    if nil ~= dicText then
+                        v:setString( myG.getStrForDictionary( dicText[2] ) )
+                    end
+                end
+            end
+            self:convertDictionary( v )
+        end
+    end
+end
+
+--互斥按钮
+function Tools:createMutexButton( mutexButtonList, selectIndex, eventCallback )    
+    local function mutexButtonCallback( sender, eventType )
+--        local arrow = mutexButtonList[selectIndex]:getChildByTag( 1 )
+        if eventType == ccui.CheckBoxEventType.selected then
+--            if arrow then
+--                arrow:setVisible( false )
+--            end
+            mutexButtonList[selectIndex]:setSelected( false )
+            selectIndex = sender.lua_index
+--            arrow = mutexButtonList[selectIndex]:getChildByTag( 1 )
+--            if arrow then
+--                arrow:setVisible( true )
+--            end
+            eventCallback( sender, eventType )
+        else
+            mutexButtonList[selectIndex]:setSelected( true )
+        end
+        
+    end
+
+    for idx, cbx in ipairs( mutexButtonList ) do
+        cbx.lua_index = idx
+        cbx:addEventListener( mutexButtonCallback )
+    end
+    mutexButtonList[selectIndex]:setSelected( true )
+end
+--检查TableView内的点击是否有效（滑出tableView外的内容点击无效）
+function Tools:checkTouchValid(obj)
+    local pos = obj:getTouchEndPosition()
+
+    local function checkPos( obj_, pos_ )
+        local affectByClipping = false
+        local node = obj_:getParent()
+        local clippingParent = nil
+        while node do
+            if nil ~= node.isClippingEnabled and node.isClippingEnabled then
+                affectByClipping = true
+                clippingParent = node
+                break
+            end
+            node = node:getParent()
+        end
+
+        if not affectByClipping then
+            return true
+        end    
+
+        local function hitTest(obj, pt)
+            local nsp = obj:convertToNodeSpace(pt)
+            local size = obj:getContentSize()
+            local rect = cc.rect( 0, 0, size.width, size.height )
+
+            if (cc.rectContainsPoint( rect, nsp)) then
+                return true
+            end
+            return false
+        end
+
+        if clippingParent then
+            local bRet = false
+
+            if hitTest(clippingParent, pos_) then
+                bRet = true
+            end
+
+            if bRet then
+                return checkPos(clippingParent, pos_);
+            end
+
+            return false
+        end
+
+        return true
+    end
+
+    return checkPos( obj, pos )
+end
+
+local isOpeLog = true
+function Tools:createTimer()
+    local timer = {}
+    timer.cur = os.clock()
+    timer.isOpeLog = isOpeLog
+    timer.log = function( str )
+                    if timer.isOpeLog == false then
+                        return
+                    end
+                    str = str or ""
+                    cclog( "[Timer Log] "..str.." "..( os.clock() - timer.cur ) )
+                    timer.cur = os.clock()
+                end
+    return timer
+end
+
+
+--拆分字符串
+function Tools:splitWord(str)
+    local len = #str
+    local left = 0
+    local arr = { 0, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc }
+    local t = {}
+    local start = 1
+    local wordLen = 0
+    while len ~= left do
+        local tmp = string.byte(str, start)
+        local i = #arr
+        while arr[i] do
+            if tmp >= arr[i] then
+                break
+            end
+            i = i - 1
+        end
+        wordLen = i + wordLen
+        local tmpString = string.sub(str, start, wordLen)
+        start = start + i
+        left = left + i
+        t[#t + 1] = tmpString
+    end
+    return t
+end
+
