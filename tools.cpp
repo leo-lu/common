@@ -24,3 +24,34 @@ std::string utf8_to_charset(const std::string &input) {
 	//return output.size();
 	return strTemp;
 }
+
+//wellbye
+//可重演的随机数生成器
+class RandGenerator{
+	
+	int initSeed;
+	int curSeed;
+	
+public:
+	RandGenerator(int s=cocos2d::random(0,65535)){ reset(s); }
+	
+	void reset(int s=cocos2d::random(0,65535)){
+		if( curSeed==initSeed )
+			return;
+		
+		initSeed = curSeed= s;
+	}
+	
+	void resetLast(){
+		curSeed = initSeed;
+	}
+	
+	int	getNext(int f=0, int t=65535){
+		int next = (curSeed * 9301 + 49297) % 233280;
+		float rnd = next / (233280.f);
+		int r =  floor( f + rnd * (t+1 - f) );
+		curSeed = next;
+		return r;
+		
+	}
+};
