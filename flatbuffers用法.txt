@@ -1,0 +1,31 @@
+	MyGame::Vec3 pos = { 20, 30, 100 };
+	flatbuffers::FlatBufferBuilder builder;
+	auto name = builder.CreateString("MyMonster");
+	unsigned char nArr[] = { 10, 20, 30, 5, 80 };
+	auto arr = builder.CreateVector(nArr, 5);
+	auto orc = CreateMonster(builder, &pos, 100, 200, name, arr, MyGame::Color_Green, MyGame::Any_Monster);
+	builder.Finish(orc);
+
+
+	//buffer to json
+	std::string schemafile;
+	TEST_EQ(flatbuffers::LoadFile("fbs/test.fbs", false, &schemafile), true);
+	flatbuffers::Parser parser;
+	const char *include_directories[] = { "test", nullptr };
+	TEST_EQ(parser.Parse(schemafile.c_str(), include_directories), true);
+	//flatbuffers::Verifier verifier(builder.GetBufferPointer(), builder.GetSize());
+	//TEST_EQ(VerifyMonsterBuffer(verifier), true);
+	std::string jsongen;
+	GenerateText(parser, builder.GetBufferPointer(), &jsongen);
+
+	//json to buffer
+	flatbuffers::Parser jsonObj;
+	const char *include_directories_[] = { "ttt", nullptr };
+	TEST_EQ(jsonObj.Parse(schemafile.c_str(), include_directories_), true);
+	TEST_EQ(jsonObj.Parse(jsongen.c_str(), include_directories_), true);
+	flatbuffers::Verifier verifier(jsonObj.builder_.GetBufferPointer(), jsonObj.builder_.GetSize());
+	auto monster = GetMonster(jsonObj.builder_.GetBufferPointer());
+	std::string strName = monster->name()->c_str();
+	auto p = monster->pos();
+	MyGame::Color c = monster->color();
+	auto hp = monster->hp();
