@@ -5,3 +5,5 @@ PNG压缩			pngquant
 BMFONT(字体)		glyph designer
 2822656087
 407746161
+
+GameBench		性能测试 检测
