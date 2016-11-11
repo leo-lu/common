@@ -10,3 +10,4 @@ GameBench		性能测试 检测
 jPixel			像素格式编辑器（动画）
 Tilemancer		图块编辑器
 fir.im
+http://indienova.com/indie-game-development/grid-implementation-of-hex/  六角网格
