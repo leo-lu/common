@@ -1,0 +1,6 @@
+{
+	"cmd": ["G:/test/Clear/simulator/win32/Clear.exe", "-workdir", "G:/test/Clear/"],
+	"file_regex": "^(?:lua:)?[/t ](...*?):([0-9]*):?([0-9]*)",
+	"selector": "main.lua",
+	"shell": true
+}
