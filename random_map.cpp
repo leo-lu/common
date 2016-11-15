@@ -391,7 +391,7 @@ private:
 
 int main()
 {
-	Dungeon d(80, 30);
+	Dungeon d(50, 20);
 	d.generate(70);
 	d.print();
 
