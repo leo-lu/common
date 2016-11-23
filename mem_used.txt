@@ -1,0 +1,17 @@
+    /**
+     * 获取当前进程使用的内存大小，单位KB
+     * @param context
+     * @return
+     */
+    public static int getTotalPssUsed(Context context) {
+        ActivityManager am = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        if (am  == null) {
+            return 0;
+        }
+        int pid = android.os.Process.myPid();
+        Debug.MemoryInfo[] memInfos = am.getProcessMemoryInfo(new int[] {pid});
+        if (memInfos == null || memInfos.length < 1) {
+            return 0;
+        }
+        return memInfos[0].getTotalPss();
+    }
