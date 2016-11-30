@@ -16,3 +16,4 @@ http://indienova.com/sp/gameDevResource 开发资源
 Overlap2D 开源的 2D 关卡与 UI 编辑软件，号称除去写代码外唯一需要用到的 2D 游戏开发工具。
 
 www.spriters-resource.com  各种像素游戏资源
+http://opengameart.org/
