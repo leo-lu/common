@@ -18,3 +18,5 @@ Overlap2D 开源的 2D 关卡与 UI 编辑软件，号称除去写代码外唯�
 www.spriters-resource.com  各种像素游戏资源
 http://opengameart.org/
 http://web.airdroid.com/
+
+yum lrzsz  远程上传工具
