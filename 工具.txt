@@ -20,3 +20,5 @@ http://opengameart.org/
 http://web.airdroid.com/
 
 yum lrzsz  远程上传工具
+
+jenkins 打包工具
